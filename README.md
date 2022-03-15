@@ -11,6 +11,11 @@
     <br/>
 </p>
 
+### About 
+
+This is wrapper of gitflic API.\
+All API documentation is here: https://gitflic.ru/help/api/intro
+
 ### Installation
 
 Install via pip:
