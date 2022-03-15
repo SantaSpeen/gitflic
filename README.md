@@ -13,6 +13,9 @@
 
 ### About 
 
+[![PyPI download month](https://img.shields.io/pypi/dm/gitflic.svg)](https://pypi.python.org/pypi/gitflic/)
+[![PyPI download week](https://img.shields.io/pypi/dd/gitflic.svg)](https://pypi.python.org/pypi/gitflic/)
+
 This is wrapper of gitflic API.\
 All API documentation is here: https://gitflic.ru/help/api/intro
 
