@@ -39,7 +39,7 @@ class Gitflic:
 
     def reg_call(self, method: str):
 
-        l = lambda *_args, **_kwargs: self.call(method, *_args, **_kwargs)
+        l = lambda add_to_method="", *_args, **_kwargs: self.call(method+add_to_method, *_args, **_kwargs)
         l.__name__ = method.replace("/", "_")
 
         return l
