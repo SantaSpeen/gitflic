@@ -13,13 +13,6 @@ from .exceptions import (
 API_URL = 'https://api.gitflic.ru'
 
 
-class GitflicAPIMethods(Enum):
-    """ Methods that you may use for calling API. """
-    USER_ME = "/user/me"
-    USER = "/user"
-    # There is not all methods, please expand if you need some other method.
-
-
 class Gitflic:
     """
     Gitflic API wrapper.
