@@ -1,3 +1,7 @@
+"""
+All exceptions that may be raised from Gitflic API wrapper.
+"""
+
 class GitflicExceptions(Exception):
     error_code: int = 1
     reason: str = None
