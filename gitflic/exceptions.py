@@ -12,8 +12,8 @@ class AuthError(GitflicExceptions):
 
 class NoRights(GitflicExceptions):
     error_code = 403
-    reason = "Нет прав для доступа."
-    reason_ru = "There are no access rights."
+    reason = "There are no access rights."
+    reason_ru = "Нет прав для доступа."
 
 
 class NotFound(GitflicExceptions):
