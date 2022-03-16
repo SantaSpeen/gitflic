@@ -1,8 +1,8 @@
 # gitflic
 
 <p align="center">
-    <a href="https://github.com/sssr-dev/api-server/blob/master/LICENSE"><img alt="GitHub license" src="https://img.shields.io/github/license/sssr-dev/api-server?style=for-the-badge"></a>    
-    <a href="https://github.com/sssr-dev/api-server/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/sssr-dev/api-server?style=for-the-badge"></a>    
+    <a href="https://github.com/SantaSpeen/gitflic/blob/master/LICENSE"><img alt="GitHub license" src="https://img.shields.io/github/license/SantaSpeen/gitflic?style=for-the-badge"></a>    
+    <a href="https://github.com/SantaSpeen/gitflic/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/SantaSpeen/gitflic?style=for-the-badge"></a>    
     <a href="https://github.com/SantaSpeen"><img src="https://github.com/SantaSpeen/gitflic/blob/master/.readme_files/magic_logo.svg" alt="magic"></a>
     <br/>
     <a href="./examples/auth_with_token_and_reg_call.py">
