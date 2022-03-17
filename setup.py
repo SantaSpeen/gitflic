@@ -1,4 +1,6 @@
+#!python3
 import os
+import shutil
 import sys
 
 from setuptools import setup
@@ -10,11 +12,15 @@ packages = ['gitflic']
 requires = ['requests']
 
 # 'setup.py publish' shortcut.
-if sys.argv[-1] == 'publish':
-    os.system('py -m build')
-    os.system('py -m twine upload --repository testpypi dist/*')
-    os.system('py -m twine upload --repository pypi dist/*')
-    sys.exit()
+if 'publish' in sys.argv:
+    # Only if packages == 1
+    for dir in ("./dist", f"{packages[0]}.egg-info"):
+        if os.path.isdir(dir):
+            shutil.rmtree(dir)
+    os.system('python3 -m build')
+    os.system('python3 -m twine upload --repository testpypi dist/*')
+    os.system('python3 -m twine upload --repository pypi dist/*')
+    sys.exit(0)
 
 about = {}
 with open(os.path.join(here, 'gitflic', '__version__.py'), 'r', encoding='utf-8') as f:
