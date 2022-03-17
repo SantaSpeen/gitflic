@@ -1,5 +1,5 @@
 __title__ = "gitflic"
-__version__ = "0.10"
+__version__ = "0.11"
 __description__ = "GitflicApi wrapper"
 __author__ = "SantaSpeen"
 __author_email__ = "dir@sssr.dev"

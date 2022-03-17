@@ -1,16 +1,28 @@
 """
 Main Gitflic API wrapper.
 """
-
-from enum import Enum
-
 from .auth import GitflicAuth
 from .exceptions import (
-    NotFound, NoRights, GitflicExceptions
+    NotFound, AccessDenied, GitflicExceptions
 )
 
 
 API_URL = 'https://api.gitflic.ru'
+
+
+def _fix_none(obj):
+    if isinstance(obj, tuple) or isinstance(obj, list):
+        obj = list(obj)
+        for index, item in enumerate(obj):
+            if item is None:
+                obj[index] = ''
+
+    elif isinstance(obj, dict):
+        for k, v in obj.items():
+            if v is None:
+                obj[k] = ''
+
+    return obj
 
 
 class Gitflic:
@@ -38,11 +50,11 @@ class Gitflic:
 
         url = response.url
         if code == 403:
-            raise NoRights(f"Access denied for '{url}'")
+            raise AccessDenied(f"Access denied for '{url}'")
         elif code == 404:
             raise NotFound(f"Location '{url}' not found")
 
-        raise GitflicExceptions(f"Gitflic sent unknown error with HTTP code: {code}. Response: {response.text}")
+        raise GitflicExceptions(f"Gitflic sent unknown error with HTTP code: {code}. Url: {url}. Response: {response.text}")
 
     def call(self, method: str, *args, **kwargs):
         """
@@ -53,9 +65,38 @@ class Gitflic:
         response = self.session.get(API_URL + method, *args, **kwargs)
         return self._response_handler(response)
 
-    def reg_call(self, method: str):
+    def __reg_call_handler(self, *args, end=None, **kwargs):
+        if end is None:
+            end = ""
+        args: list = _fix_none(args)
+        kwargs: dict = _fix_none(kwargs)
+        disable_formatting: bool = kwargs.pop("disable_formatting", False)
+        method: str = kwargs['__gitflic_method_name__']
 
-        l = lambda add_to_method="", *_args, **_kwargs: self.call(method+add_to_method, *_args, **_kwargs)
-        l.__name__ = method.replace("/", "_")
+        # If not need formatting
+        if not disable_formatting:
+            if len(args) > 0:
+                try:
+                    if "%" in method:
+                        method %= tuple(args)
+                    else:
+                        method = method.format(*args)
 
-        return l
+                except Exception as e:
+                    raise GitflicExceptions(f"Formatting error: {e!r}; In call: '{method}; Args: {args}'")
+            elif len(kwargs) > 0:
+                if "%" in method:
+                    method %= kwargs
+                else:
+                    method = method.format_map(kwargs)
+
+        method += end
+
+        return self.call(method)
+
+    def reg_call(self, method_string: str):
+
+        func = lambda *args, **kwargs: self.__reg_call_handler(*args, **kwargs, __gitflic_method_name__=method_string)
+        func.__name__ = method_string
+
+        return func
