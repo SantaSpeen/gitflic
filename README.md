@@ -3,10 +3,10 @@
 <p align="center">
     <a href="https://github.com/SantaSpeen/gitflic/blob/master/LICENSE"><img alt="GitHub license" src="https://img.shields.io/github/license/SantaSpeen/gitflic?style=for-the-badge"></a>    
     <a href="https://github.com/SantaSpeen/gitflic/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/SantaSpeen/gitflic?style=for-the-badge"></a>    
-    <a href="https://github.com/SantaSpeen"><img src="https://github.com/SantaSpeen/gitflic/blob/master/.readme_files/magic_logo.svg" alt="magic"></a>
+    <a href="https://github.com/SantaSpeen"><img src="https://img.santaspeen.ru/github/magic.svg" alt="magic"></a>
     <br/>
-    <a href="./examples/auth_with_token_and_reg_call.py">
-        <img src="https://github.com/SantaSpeen/gitflic/blob/master/.readme_files/preview.png" alt="preview ds">
+    <a href="examples/reg_call.py">
+        <img src="https://img.santaspeen.ru/github/gitflic/preview.png" alt="preview">
     </a>
     <br/>
 </p>
@@ -44,7 +44,7 @@ print(me_call)
 gf.user = gf.reg_call("/user")
 
 # Request "https://api.gitflic.ru/user/me"
-me_with_reg = gf.user("/me")
+me_with_reg = gf.user(end="/me")
 print(me_with_reg)
 print("Is me_with_reg equals me_call:", me_with_reg == me_call)
 
