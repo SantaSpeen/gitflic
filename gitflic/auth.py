@@ -1,6 +1,8 @@
 """
 Gitflic authentication wrapper.
 """
+import urllib.parse
+import webbrowser
 from enum import Enum
 from typing import Union
 import logging
@@ -13,15 +15,38 @@ from .__version__ import __version__
 OAUTH_URL = "https://oauth.gitflic.ru/oauth/authorize?scope={}&clientId={}&redirectUrl={}&state={}"
 
 
+def _add_enum_values(*args):
+    string = str()
+    for arg in args:
+        if isinstance(arg, Enum):
+            string += arg.value
+        else:
+            string += str(arg)
+        string += ","
+    return string[:len(string)-1]
+
+
 class GitflicAuthScopes(Enum):
-    """ Authentication scopes from Gitflic. """
+    """ Authentication scopes from Gitflic. Doc: https://gitflic.ru/help/api/access-token"""
     USER_READ = "USER_READ"
     USER_WRITE = "USER_WRITE"
     PROJECT_READ = "PROJECT_READ"
     PROJECT_WRITE = "PROJECT_WRITE"
     PROJECT_EDIT = "PROJECT_EDIT"
 
-    ALL = "USER_READ,USER_WRITE,PROJECT_READ,PROJECT_WRITE,PROJECT_EDIT"
+    # For a hint in the IDE
+    ALL_READ: "GitflicAuthScopes.ALL_READ"
+    ALL_WRITE: "GitflicAuthScopes.ALL_WRITE"
+    ALL: "GitflicAuthScopes.ALL"
+
+
+GitflicAuthScopes.ALL_READ = _add_enum_values(GitflicAuthScopes.USER_READ,
+                                              GitflicAuthScopes.PROJECT_READ)
+GitflicAuthScopes.ALL_WRITE = _add_enum_values(GitflicAuthScopes.PROJECT_WRITE,
+                                               GitflicAuthScopes.PROJECT_EDIT,
+                                               GitflicAuthScopes.PROJECT_WRITE)
+GitflicAuthScopes.ALL = _add_enum_values(GitflicAuthScopes.ALL_WRITE,
+                                         GitflicAuthScopes.ALL_READ)
 
 
 class GitflicAuth:
@@ -99,15 +124,15 @@ class GitflicAuth:
         self.log.debug("Trying to login with OAUTH...")
 
         # OAUTH authorization.
-        raise GitflicExceptions("OAUTH not implemented yet! Use raw access_token authorization.")
-
-        # redirect_url = urllib.parse.quote_plus(self.redirect_url)
-        # webbrowser.open(OAUTH_URL.format(self.scope, self.client_id, redirect_url, self.state))
+        redirect_url = urllib.parse.quote_plus(self.redirect_url)
+        webbrowser.open(OAUTH_URL.format(self.scope, self.client_id, redirect_url, self.state))
         # url = input("Paste redirect url: ")
         # r = self.session.get("").json()
         # print(r)
         # self.session.headers.update({"Authorization": "token " + "null"})
         # self.check_token()
+        raise GitflicExceptions("OAUTH not implemented yet! Use raw access_token authorization.")
+
 
     def _token_login(self):
         """
