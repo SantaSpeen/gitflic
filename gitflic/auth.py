@@ -1,7 +1,9 @@
 """
 Gitflic authentication wrapper.
 """
-import urllib.parse
+import os
+import threading
+from urllib.parse import quote_plus, parse_qs, urlsplit
 import webbrowser
 from enum import Enum
 from typing import Union
@@ -11,6 +13,7 @@ import requests
 
 from .exceptions import AuthError, GitflicExceptions
 from .__version__ import __version__
+from ._oauth_server import GitflicOAuthServer
 
 OAUTH_URL = "https://oauth.gitflic.ru/oauth/authorize?scope={}&clientId={}&redirectUrl={}&state={}"
 
@@ -23,7 +26,7 @@ def _add_enum_values(*args):
         else:
             string += str(arg)
         string += ","
-    return string[:len(string)-1]
+    return string[:len(string) - 1]
 
 
 class GitflicAuthScopes(Enum):
@@ -57,16 +60,18 @@ class GitflicAuth:
     # noinspection PyTypeChecker
     def __init__(self,
                  access_token: str = None,
-                 scope: Union[GitflicAuthScopes, str] = None,
-                 client_id: str = None,
-                 redirect_url: str = None,
-                 state: str = None):
+                 localhost_oauth: bool = False,
+                 scope: Union[GitflicAuthScopes, str] = GitflicAuthScopes.ALL_READ,
+                 client_id: str = "cc2a5d8a-385a-4367-8b2b-bb2412eacb73",
+                 redirect_url: str = "https://gitflic.ru/settings/oauth/token",
+                 state: str = "python_user",
+                 oauth_implemented_pass: bool = False):
         """
         :param access_token: Raw token for raw AUTH.
-        :param scope: OAUTH field.
-        :param client_id: OAUTH field.
-        :param redirect_url: OAUTH field.
-        :param state: OAUTH field.
+        :param scope: OAUTH field. Default GitflicAuthScopes.ALL_READ
+        :param client_id: OAUTH field. Default "cc2a5d8a-385a-4367-8b2b-bb2412eacb73", Simple gitflic app
+        :param redirect_url: OAUTH field. Default "https://gitflic.ru/settings/oauth/token/"
+        :param state: OAUTH field. Default "python_user"
         """
 
         # Logging.
@@ -84,13 +89,18 @@ class GitflicAuth:
 
         # Token fields.
         self.access_token: str = access_token
+        self.refresh_token: str = None
 
         # OAUTH fields.
         self.scope: str = scope if not isinstance(scope, GitflicAuthScopes) else scope.value
+        self._localhost_oauth: bool = localhost_oauth
+
         self.client_id: str = client_id
         self.redirect_url: str = redirect_url
         self.state: str = state
-        self.refresh_token: str = None
+
+        self._server_thread: threading.Thread = None
+        self._oauth_implemented_pass: bool = oauth_implemented_pass
 
         self._try_login()
 
@@ -98,17 +108,24 @@ class GitflicAuth:
         """
         Tries to login user with token or OAUTH.
         """
-        if self.access_token:
+        if self._localhost_oauth:
+            self.state = self.state or "GitflicOAuthServer"
+            if not (self.scope and self.client_id):
+                raise GitflicExceptions(
+                    "Using localhost, you are required to this params: ('scope', 'client_id')! "
+                )
+            self._oauth_login()
+        elif self.access_token:
             # Raw authorization.
             self._token_login()
         else:
-            if self.scope and self.client_id and self.redirect_url and self.state:
+            if self.scope and self.client_id and self.state:
                 # OAUTH authorization.
                 self._oauth_login()
             else:
                 if any((self.scope, self.client_id, self.redirect_url, self.state)):
                     raise GitflicExceptions(
-                        "Not found one of params for OAUTH, you are required to send ALL params from ('scope', 'client_id', 'redirect_url', 'state')! "
+                        "Not found one or more of params for OAUTH, you are required to send ALL params from ('scope', 'client_id', 'redirect_url', 'state')! "
                         "See docs: https://gitflic.ru/help/api/access-token."
                     )
                 raise GitflicExceptions(
@@ -123,16 +140,46 @@ class GitflicAuth:
 
         self.log.debug("Trying to login with OAUTH...")
 
-        # OAUTH authorization.
-        redirect_url = urllib.parse.quote_plus(self.redirect_url)
-        webbrowser.open(OAUTH_URL.format(self.scope, self.client_id, redirect_url, self.state))
-        # url = input("Paste redirect url: ")
-        # r = self.session.get("").json()
-        # print(r)
-        # self.session.headers.update({"Authorization": "token " + "null"})
-        # self.check_token()
-        raise GitflicExceptions("OAUTH not implemented yet! Use raw access_token authorization.")
+        if not self._oauth_implemented_pass:
+            raise GitflicExceptions("OAUTH not implemented yet! Use raw access_token authorization.")
 
+        del self._oauth_implemented_pass
+
+        if self._localhost_oauth:
+            server, self.redirect_url = GitflicOAuthServer.get_server(self)
+
+        # OAUTH authorization.
+        redirect_url = quote_plus(self.redirect_url)
+        webbrowser.open(OAUTH_URL.format(self.scope, self.client_id, redirect_url, self.state))
+        if not self._localhost_oauth:
+            url_or_code = input("Paste redirect url: ")
+            params = parse_qs(urlsplit(url_or_code).query)
+            code = None
+            for k, v in params.items():
+                if k == "code":
+                    code = v[0]
+            res = self.session.get("https://oauth.gitflic.ru/api/token/access?code=" + code or url_or_code)
+            if res.status_code == 200:
+                res = res.json()
+                with open(os.path.join(os.getcwd(), "config.json"), "w") as f:
+                    f.write(res)
+                access_token = res['accessToken']
+                self.access_token = access_token
+                self.refresh_token = res['refreshToken']
+                self.session.headers["Authorization"] += access_token
+                self.check_token()
+            else:
+                error = None
+                title_split = res.json()['title'].split(".")
+                if len(title_split) == 6:
+                    error = title_split[2].title() + " " + title_split[3].title() + ": " + title_split[4]
+                raise AuthError(error or "Unknown error")
+        else:
+            self._server_thread = threading.Thread(target=server.serve_forever)
+            self._server_thread.start()
+            print("Waiting server..")
+            self._server_thread.join()
+            self.check_token()
 
     def _token_login(self):
         """
