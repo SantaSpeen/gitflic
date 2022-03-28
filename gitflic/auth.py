@@ -1,6 +1,7 @@
 """
 Gitflic authentication wrapper.
 """
+import json
 import os
 import threading
 from urllib.parse import quote_plus, parse_qs, urlsplit
@@ -64,8 +65,7 @@ class GitflicAuth:
                  scope: Union[GitflicAuthScopes, str] = GitflicAuthScopes.ALL_READ,
                  client_id: str = "cc2a5d8a-385a-4367-8b2b-bb2412eacb73",
                  redirect_url: str = "https://gitflic.ru/settings/oauth/token",
-                 state: str = "python_user",
-                 oauth_implemented_pass: bool = False):
+                 state: str = None):
         """
         :param access_token: Raw token for raw AUTH.
         :param scope: OAUTH field. Default GitflicAuthScopes.ALL_READ
@@ -100,7 +100,6 @@ class GitflicAuth:
         self.state: str = state
 
         self._server_thread: threading.Thread = None
-        self._oauth_implemented_pass: bool = oauth_implemented_pass
 
         self._try_login()
 
@@ -140,34 +139,26 @@ class GitflicAuth:
 
         self.log.debug("Trying to login with OAUTH...")
 
-        if not self._oauth_implemented_pass:
-            raise GitflicExceptions("OAUTH not implemented yet! Use raw access_token authorization.")
-
-        del self._oauth_implemented_pass
-
         if self._localhost_oauth:
-            server, self.redirect_url = GitflicOAuthServer.get_server(self)
+            server, self.redirect_url, self.state = GitflicOAuthServer.get_server(self)
 
         # OAUTH authorization.
         redirect_url = quote_plus(self.redirect_url)
         webbrowser.open(OAUTH_URL.format(self.scope, self.client_id, redirect_url, self.state))
         if not self._localhost_oauth:
-            url_or_code = input("Paste redirect url: ")
-            params = parse_qs(urlsplit(url_or_code).query)
-            code = None
-            for k, v in params.items():
-                if k == "code":
-                    code = v[0]
-            res = self.session.get("https://oauth.gitflic.ru/api/token/access?code=" + code or url_or_code)
+            code = input("Paste code: ")
+            if not code:
+                raise AuthError("Cannot find code.")
+            res = self.session.get("https://oauth.gitflic.ru/api/token/access?code=" + code)
             if res.status_code == 200:
                 res = res.json()
+                jsn = {"request": {"code": code, "state": None}, "response": res}
                 with open(os.path.join(os.getcwd(), "config.json"), "w") as f:
-                    f.write(res)
+                    json.dump(jsn, f, indent=3)
                 access_token = res['accessToken']
                 self.access_token = access_token
                 self.refresh_token = res['refreshToken']
                 self.session.headers["Authorization"] += access_token
-                self.check_token()
             else:
                 error = None
                 title_split = res.json()['title'].split(".")
@@ -179,7 +170,9 @@ class GitflicAuth:
             self._server_thread.start()
             print("Waiting server..")
             self._server_thread.join()
-            self.check_token()
+
+        self.session.headers['Authorization'] += self.access_token
+        self.check_token()
 
     def _token_login(self):
         """

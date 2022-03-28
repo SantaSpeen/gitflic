@@ -1,7 +1,7 @@
 import http.server
+import json
 import os
 import sys
-import time
 from typing import Tuple, AnyStr, NoReturn
 from urllib.parse import parse_qs, urlsplit
 import importlib.resources
@@ -81,7 +81,6 @@ class GitflicOAuthServer(http.server.BaseHTTPRequestHandler):
                 <hr/>
                 <center>
                     {self.server_version.replace("/", " ")} by <a href="https://github.com/SantaSpeen">SantaSpeen</a>
-             
                 </center>''')
         else:
             for k, v in params.items():
@@ -105,14 +104,14 @@ class GitflicOAuthServer(http.server.BaseHTTPRequestHandler):
 
                     res = requests.get("https://oauth.gitflic.ru/api/token/access?code=" + code)
                     if res.status_code == 200:
-                        res = res.json()
+                        jsn = {"request": {"code": code, "state": state}, "response": res.json()}
                         with open(os.path.join(os.getcwd(), "config.json"), "w") as f:
-                            f.write(res)
+                            json.dump(jsn, f, indent=3)
 
-                        access_token = res['accessToken']
+                        access_token = jsn['response']['accessToken']
                         if _GitflicAuth:
                             _GitflicAuth.access_token = access_token
-                            _GitflicAuth.refresh_token = res['refreshToken']
+                            _GitflicAuth.refresh_token = jsn['response']['refreshToken']
                         self.send_html_row("access_token", "Access Token:", access_token)
                     else:
                         is_error = True
@@ -132,7 +131,8 @@ class GitflicOAuthServer(http.server.BaseHTTPRequestHandler):
 
             # Info and footer send
             self.send("""
-            <div class="text-center bg-light mt-auto" style="position: absolute;width: 100%;background-color: rgba(0, 0, 0, 0.2);bottom: 0;">
+            <div style="min-height: 53vh !important;"> </div>
+            <div class="text-center bg-light mt-auto container-fluid">
                 <div class="text-muted lh-1">
                     <p class="fs-2">Server close automatically.</p>
                     <p class="fs-">You can close this page</p>
@@ -160,19 +160,25 @@ class GitflicOAuthServer(http.server.BaseHTTPRequestHandler):
                 sys.exit(1)
 
 
-def get_server(auth_class, port: int = None) -> Tuple[http.server.HTTPServer, str]:
+def get_server(auth_class, port: int = None) -> Tuple[http.server.HTTPServer, str, str]:
     global server, redirect_link, _GitflicAuth
     _GitflicAuth = auth_class
+    url = "https://gitflic.santaspeen.ru/"
     try:
         port = port or randint(49152, 65535)
-        server_address = ('127.0.0.1', port)
-        server = http.server.HTTPServer(server_address, GitflicOAuthServer)
-        redirect_link = f"http://{':'.join([str(i) for i in server_address])}/"
-        print(f"GitflicOAuthServer serving on {redirect_link}")
-        return server, redirect_link
+        server_address = ('localhost', port)
+        req = requests.get(url+"getstate", params={"port": port})
+        if req.status_code == 201:
+            server = http.server.HTTPServer(server_address, GitflicOAuthServer)
+            serving = f"http://{':'.join([str(i) for i in server_address])}/"
+            print(f"GitflicOAuthServer serving on {serving}")
+            state = req.json()['state']
+            return server, url+state, state
     except Exception as e:
         print(f"get_server send error: {e}. Trying to rebind server.")
         return get_server(auth_class)
+
+    raise Exception(f"Cannot get state code from {url}")
 
 
 def kill_server():
