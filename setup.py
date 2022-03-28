@@ -50,8 +50,7 @@ setup(
         "Operating System :: OS Independent",
     ],
     project_urls={
-        'Documentation': 'https://anixart.readthedocs.io/',
-        'Source': 'https://github.com/SantaSpeen/anixart',
+        'Source': about['__url__'],
     },
     python_requires=">=3.7",
 )
