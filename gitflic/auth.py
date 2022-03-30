@@ -4,7 +4,7 @@ Gitflic authentication wrapper.
 import json
 import os
 import threading
-from urllib.parse import quote_plus, parse_qs, urlsplit
+from urllib.parse import quote_plus
 import webbrowser
 from enum import Enum
 from typing import Union
@@ -14,7 +14,7 @@ import requests
 
 from .exceptions import AuthError, GitflicExceptions
 from .__version__ import __version__
-from ._oauth_server import GitflicOAuthServer
+from gitflic.GitflicOAuthServer import get_server
 
 OAUTH_URL = "https://oauth.gitflic.ru/oauth/authorize?scope={}&clientId={}&redirectUrl={}&state={}"
 
@@ -140,7 +140,7 @@ class GitflicAuth:
         self.log.debug("Trying to login with OAUTH...")
 
         if self._localhost_oauth:
-            server, self.redirect_url, self.state = GitflicOAuthServer.get_server(self)
+            server, self.redirect_url, self.state = get_server(self)
 
         # OAUTH authorization.
         redirect_url = quote_plus(self.redirect_url)
