@@ -14,9 +14,9 @@ requires = ['requests']
 # 'setup.py publish' shortcut.
 if 'publish' in sys.argv:
     # Only if packages == 1
-    for dir in ("./dist", f"{packages[0]}.egg-info"):
-        if os.path.isdir(dir):
-            shutil.rmtree(dir)
+    for directory in ("./dist", f"{packages[0]}.egg-info"):
+        if os.path.isdir(directory):
+            shutil.rmtree(directory)
     os.system('python3 -m build')
     os.system('python3 -m twine upload --repository testpypi dist/*')
     os.system('python3 -m twine upload --repository pypi dist/*')
