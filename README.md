@@ -23,7 +23,11 @@ All API documentation is here: https://gitflic.ru/help/api/intro
 
 Install via pip:
 
-`pip install gitflic`
+```shell
+# Shell
+
+$ pip3 install gitflic
+```
 
 ### Example:
 
